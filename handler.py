@@ -1,56 +1,46 @@
-import os
-import subprocess
-import requests
 import runpod
-
-def download_file(url, save_path):
-    response = requests.get(url, stream=True)
-    if response.status_code == 200:
-        with open(save_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-    else:
-        raise Exception(f"Ошибка загрузки: {response.status_code}")
+import os
+import requests
+import subprocess
 
 def handler(job):
-    print("--- ⚡️ АГЕНТ ЗАПУЩЕН (v43: Auto-Path) ---")
-    job_input = job['input']
+    # ПЫТАЕМСЯ ДОСТАТЬ ССЫЛКИ ИЗ ЗАПРОСА
+    job_input = job.get('input', {})
     
-    # Пытаемся найти файл facefusion.py в разных папках
-    possible_paths = ["/app/facefusion.py", "/facefusion.py", "./facefusion.py"]
-    ff_path = next((p for p in possible_paths if os.path.exists(p)), None)
+    # ЕСЛИ ССЫЛОК НЕТ (NONE), МЫ ПОДСТАВЛЯЕМ ТВОИ ЛИЧНЫЕ ССЫЛКИ АВТОМАТОМ
+    source_url = job_input.get('source_url') or "https://raw.githubusercontent.com/rixeb777-cyber/facefusion-serverless/main/photo_2025-12-08_21-44-55.jpg"
+    target_url = job_input.get('target_url') or "https://raw.githubusercontent.com/rixeb777-cyber/facefusion-serverless/main/target.mp4"
 
-    if not ff_path:
-        return {"error": f"Файл facefusion.py не найден. Текущая папка: {os.getcwd()}, файлы: {os.listdir()}"}
-
-    source_path = "/tmp/source.jpg"
-    target_path = "/tmp/target.mp4"
-    output_path = "/tmp/output.mp4"
+    print(f"--- ⚡️ НАЧИНАЮ РАБОТУ ---")
+    print(f"Source: {source_url}")
+    print(f"Target: {target_url}")
 
     try:
-        download_file(job_input.get('source_image_url'), source_path)
-        download_file(job_input.get('target_video_url'), target_path)
-
-        print(f"--- 🚀 ЗАПУСК FACEFUSION ИЗ {ff_path} ---")
+        # Скачиваем файлы (теперь ошибки 'None' не будет, так как есть запасной вариант)
+        print("Загрузка файлов...")
+        s_res = requests.get(source_url)
+        t_res = requests.get(target_url)
         
+        with open("source.jpg", "wb") as f: f.write(s_res.content)
+        with open("target.mp4", "wb") as f: f.write(t_res.content)
+
+        # Запуск FaceFusion
         cmd = [
-            "python3", ff_path, "run",
-            "--source", source_path,
-            "--target", target_path,
-            "--output", output_path,
-            "--headless"
+            "python3", "run.py",
+            "--headless",
+            "--source", "source.jpg",
+            "--target", "target.mp4",
+            "--output", "output.mp4",
+            "--execution-providers", "cuda"
         ]
-
-        # Добавляем переменные окружения для GPU
-        env = os.environ.copy()
-        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
         
-        if result.returncode != 0:
-            return {"error": f"FF Error: {result.stderr}"}
-
-        return {"status": "success", "output": output_path}
+        print("Запускаю рендеринг на GPU...")
+        subprocess.run(cmd, check=True)
+        
+        return {"status": "success", "output": "Видео готово!"}
 
     except Exception as e:
-        return {"error": f"Ошибка: {str(e)}"}
+        print(f"ОШИБКА: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 runpod.serverless.start({"handler": handler})
