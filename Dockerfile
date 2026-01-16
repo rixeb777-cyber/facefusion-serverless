@@ -1,11 +1,19 @@
-FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+FROM runpod/base:0.4.0-cuda11.8.0
 
-RUN apt-get update && apt-get install -y \
-    python3.11 python3-pip libgl1-mesa-glx libglib2.0-0 libsndfile1 bash ffmpeg curl \
-    && rm -rf /var/lib/apt/lists/*
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y git python3-pip ffmpeg libsm6 libxext6
 
-RUN pip3 install runpod requests numpy scipy opencv-python onnxruntime-gpu
+# Клонируем сам FaceFusion в папку /app
+RUN git clone https://github.com/facefusion/facefusion.py.git /app
 
 WORKDIR /app
+
+# Устанавливаем зависимости FaceFusion
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install runpod requests
+
+# Копируем твой обработчик поверх скачанных файлов
 COPY handler.py /app/handler.py
-CMD ["python3", "-u", "/app/handler.py"]
+
+# Запускаем
+CMD [ "python3", "-u", "handler.py" ]
