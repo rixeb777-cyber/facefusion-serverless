@@ -6,9 +6,11 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# КРИТИЧЕСКИЙ ШАГ: Ставим requests и runpod напрямую
+# Обновляем pip и ставим базовые либы для RunPod
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install requests runpod
 
@@ -20,8 +22,8 @@ RUN curl -L https://github.com/facefusion/facefusion/archive/refs/heads/master.z
     cp -r facefusion-master/* . && \
     rm -rf facefusion-master master.zip
 
-# Установка зависимостей FaceFusion
-RUN python3 -m pip install -r requirements.txt
+# Установка зависимостей с игнорированием проблемных версий
+RUN python3 -m pip install --no-cache-dir -r requirements.txt --prefer-binary
 
 COPY handler.py /app/handler.py
 
