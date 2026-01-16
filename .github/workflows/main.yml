@@ -24,5 +24,4 @@ jobs:
           push: true
           # Мы помечаем образ сразу двумя тегами для надежности
           tags: |
-            rixeb/facefusion-serverless:v50
-            rixeb/facefusion-serverless:latest
+            rixeb/facefusion-serverless:v51
