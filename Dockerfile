@@ -1,30 +1,29 @@
-# Используем образ с поддержкой CUDA
+# Используем стабильный образ с CUDA
 FROM runpod/base:0.4.0-cuda11.8.0
 
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
-    git \
+    wget \
+    unzip \
     python3-pip \
     ffmpeg \
     libsm6 \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Клонируем FaceFusion (используем https без .git для надежности)
-RUN git clone https://github.com/facefusion/facefusion-assets /app && \
-    cd /app && git clone https://github.com/facefusion/facefusion /app/facefusion_src
-
+# Скачиваем FaceFusion как ZIP-архив (обход ошибки git clone)
 WORKDIR /app
+RUN wget https://github.com/facefusion/facefusion/archive/refs/heads/master.zip && \
+    unzip master.zip && \
+    mv facefusion-master/* . && \
+    rm master.zip
 
-# Переносим файлы из скачанной папки в корень /app, если нужно
-RUN cp -r /app/facefusion_src/* /app/ && rm -rf /app/facefusion_src
-
-# Устанавливаем зависимости
+# Устанавливаем зависимости FaceFusion
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install runpod requests
 
-# Копируем твой обработчик
+# Копируем твой обработчик поверх
 COPY handler.py /app/handler.py
 
-# Запускаем через python3
+# Запуск
 CMD [ "python3", "-u", "handler.py" ]
