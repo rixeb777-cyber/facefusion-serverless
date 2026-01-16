@@ -1,7 +1,7 @@
-# Используем образ с поддержкой CUDA для работы видеокарты
+# Используем образ с поддержкой CUDA
 FROM runpod/base:0.4.0-cuda11.8.0
 
-# Устанавливаем необходимые системные утилиты
+# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     git \
     python3-pip \
@@ -10,17 +10,21 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Клонируем официальный репозиторий FaceFusion прямо в образ
-RUN git clone https://github.com/facefusion/facefusion.py.git /app
+# Клонируем FaceFusion (используем https без .git для надежности)
+RUN git clone https://github.com/facefusion/facefusion-assets /app && \
+    cd /app && git clone https://github.com/facefusion/facefusion /app/facefusion_src
 
 WORKDIR /app
 
-# Устанавливаем все библиотеки для нейросетей (это займет время)
+# Переносим файлы из скачанной папки в корень /app, если нужно
+RUN cp -r /app/facefusion_src/* /app/ && rm -rf /app/facefusion_src
+
+# Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install runpod requests
 
-# Копируем твой файл-обработчик в папку с программой
+# Копируем твой обработчик
 COPY handler.py /app/handler.py
 
-# Команда для запуска сервера
+# Запускаем через python3
 CMD [ "python3", "-u", "handler.py" ]
