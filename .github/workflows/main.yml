@@ -1,8 +1,8 @@
-name: Cloud Build v40
+name: Build and Push v50
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ] # Сработает при пуше в любую из этих веток
 
 jobs:
   build:
@@ -17,9 +17,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push
+      - name: Build and push
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: rixeb/facefusion-serverless:v40
+          # Мы помечаем образ сразу двумя тегами для надежности
+          tags: |
+            rixeb/facefusion-serverless:v50
+            rixeb/facefusion-serverless:latest
