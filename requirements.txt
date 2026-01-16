@@ -1,0 +1,10 @@
+numpy
+opencv-python
+onnx
+onnxruntime-gpu
+insightface
+psutil
+tqdm
+scipy
+requests
+runpod
