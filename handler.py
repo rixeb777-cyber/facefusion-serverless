@@ -31,7 +31,7 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Базовая команда v199
+    # Запуск v199
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
@@ -46,20 +46,17 @@ def handler(job):
     
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        
         for line in process.stdout:
             print(f"FACEFUSION_LOG: {line.strip()}")
             sys.stdout.flush()
-        
         process.wait()
         print(f"DEBUG: Process finished with code {process.returncode}")
-
     except Exception as e:
         print(f"CRASH: {str(e)}")
 
     if os.path.exists(output_p):
-        return {"status": "success", "message": "Ready!", "output": output_p}
+        return {"status": "success", "message": "Video processed!", "output": output_p}
     else:
-        return {"status": "error", "msg": "Output file not found. CUDA might be busy or missing libraries."}
+        return {"status": "error", "msg": "Check logs for CUDA errors."}
 
 runpod.serverless.start({"handler": handler})
