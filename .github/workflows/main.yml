@@ -30,4 +30,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: rixeb/facefusion-serverless:v120
+          tags: rixeb/facefusion-serverless:v130
