@@ -31,14 +31,14 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Запуск v202
+    # v204: Пробуем TensorRT + CUDA
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
         "-t", target_p,
         "-o", output_p,
         "--processors", "face_swapper",
-        "--execution-providers", "cuda",
+        "--execution-providers", "tensorrt", "cuda",
         "--skip-download"
     ]
 
@@ -56,6 +56,7 @@ def handler(job):
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
     else:
-        return {"status": "error", "msg": "CUDA is still not active. Check logs."}
+        # Если не вышло, попробуем БЕЗ указания провайдера (пусть сам решит)
+        return {"status": "error", "msg": "GPU initialization failed."}
 
 runpod.serverless.start({"handler": handler})
