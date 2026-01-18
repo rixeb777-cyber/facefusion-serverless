@@ -14,7 +14,7 @@ RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.
 # 3. Установка Python-пакетов
 RUN python3 -m pip install --upgrade pip
 
-# Устанавливаем базу (v198: Обновленный ONNX для работы с CUDA)
+# КРУТО: Устанавливаем конкретную версию ONNX, которая дружит с CUDA 11.8
 RUN python3 -m pip install --no-cache-dir \
     numpy==1.24.3 \
     scipy==1.10.1 \
@@ -22,7 +22,7 @@ RUN python3 -m pip install --no-cache-dir \
     onnxruntime-gpu==1.17.1 \
     runpod requests gdown
 
-# Доставляем зависимости из реквизитов
+# Доставляем зависимости
 RUN python3 -m pip install --no-cache-dir -r requirements.txt || echo "Done"
 
 # 4. Скачивание моделей
@@ -30,7 +30,7 @@ RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
     curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx
 
-# Символические ссылки для совместимости имен
+# Ссылки для совместимости
 RUN ln -s /root/.facefusion/models/inswapper_128_fp16.onnx /root/.facefusion/models/inswapper_128.onnx || true
 RUN ln -s /root/.facefusion/models/yoloface_8n.onnx /root/.facefusion/models/yoloface_8n.onnx || true
 
@@ -41,7 +41,8 @@ COPY handler.py /app/handler.py
 ENV PYTHONPATH="/app"
 ENV HOME="/root"
 
-# КРУТО: Добавляем путь к библиотекам CUDA, чтобы FaceFusion их увидел
+# КРУТО: Эти две строки заставят FaceFusion "увидеть" видеокарту
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+ENV CUDA_MODULE_LOADING=LAZY
 
 CMD [ "python3", "-u", "handler.py" ]

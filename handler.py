@@ -31,7 +31,7 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # КОМАНДА ДЛЯ FACEFUSION 3.0.0 (v198)
+    # Базовая команда v199
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
@@ -60,6 +60,6 @@ def handler(job):
     if os.path.exists(output_p):
         return {"status": "success", "message": "Ready!", "output": output_p}
     else:
-        return {"status": "error", "msg": "Output file not found. Check FACEFUSION_LOG."}
+        return {"status": "error", "msg": "Output file not found. CUDA might be busy or missing libraries."}
 
 runpod.serverless.start({"handler": handler})
