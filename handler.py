@@ -4,22 +4,11 @@ import requests
 import os
 import sys
 
-# Диагностика при старте контейнера
-try:
-    import torch
-    print(f"DIAGNOSTIC: CUDA available in Torch: {torch.cuda.is_available()}")
-    import onnxruntime as ort
-    print(f"DIAGNOSTIC: ORT Providers: {ort.get_available_providers()}")
-except:
-    pass
-
 def download_file(url, save_path):
     print(f"DEBUG: Downloading {url}")
-    try:
-        r = requests.get(url, stream=True)
-        with open(save_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
-    except Exception as e: print(f"ERROR: {e}")
+    r = requests.get(url, stream=True)
+    with open(save_path, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
 
 def handler(job):
     job_input = job.get('input', job)
@@ -29,15 +18,22 @@ def handler(job):
     download_file(job_input.get('source'), source_p)
     download_file(job_input.get('target'), target_p)
 
+    # v213 ТАКТИКА: Сначала пробуем CUDA, если ругается - пробуем авто-режим
+    # Мы убрали принудительный список провайдеров, чтобы дать программе шанс самой найти GPU
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p, "-t", target_p, "-o", output_p,
         "--processors", "face_swapper",
-        "--execution-providers", "cuda",
         "--skip-download"
     ]
 
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    print(f"DEBUG: Executing: {' '.join(cmd)}")
+    
+    # Добавляем переменные окружения прямо в процесс
+    my_env = os.environ.copy()
+    my_env["ONNXRUNTIME_EXECUTION_PROVIDERS"] = "CUDAExecutionProvider"
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=my_env)
     for line in process.stdout:
         print(f"FACEFUSION_LOG: {line.strip()}")
         sys.stdout.flush()
@@ -45,6 +41,6 @@ def handler(job):
 
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
-    return {"status": "error", "msg": "CUDA check failed again."}
+    return {"status": "error", "msg": "Process finished but no file found."}
 
 runpod.serverless.start({"handler": handler})

@@ -1,4 +1,3 @@
-# Используем официальный ML-образ от RunPod, где CUDA всегда работает
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
 WORKDIR /app
@@ -11,16 +10,16 @@ RUN apt-get update && apt-get install -y \
 # 2. Клонируем проект
 RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git .
 
-# 3. Чистим и ставим заново
+# 3. Установка пакетов
 RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip uninstall -y onnxruntime onnxruntime-gpu
-
-# Ставим зависимости, исключая сломанный onnx
-RUN sed -i '/onnxruntime/d' requirements.txt
-RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install numpy==1.26.4 runpod requests gdown
 
-# Ставим правильный GPU пакет
+# Удаляем все упоминания onnx из требований и ставим их вручную
+RUN sed -i '/onnxruntime/d' requirements.txt
+RUN python3 -m pip install -r requirements.txt
+
+# КРУТО: Ставим ONNX точно под CUDA 11.8
+RUN python3 -m pip uninstall -y onnxruntime onnxruntime-gpu
 RUN python3 -m pip install onnxruntime-gpu==1.17.1
 
 # 4. Модели
@@ -32,8 +31,8 @@ RUN mkdir -p /root/.facefusion/models && \
 COPY handler.py /app/handler.py
 RUN printf "from facefusion import core\nif __name__ == '__main__':\n    core.cli()" > /app/run.py
 
-ENV PYTHONPATH="/app"
-# Пути к либам в этом образе могут быть другими, пропишем всё
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+# Жёсткие переменные для поиска CUDA
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+ENV CUDA_VISIBLE_DEVICES=0
 
 CMD [ "python3", "-u", "handler.py" ]
