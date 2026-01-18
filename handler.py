@@ -4,57 +4,47 @@ import requests
 import os
 import sys
 
-# Проверка CUDA перед стартом
+# Диагностика при старте контейнера
 try:
+    import torch
+    print(f"DIAGNOSTIC: CUDA available in Torch: {torch.cuda.is_available()}")
     import onnxruntime as ort
-    print(f"DIAGNOSTIC: Available Providers: {ort.get_available_providers()}")
-except Exception as e:
-    print(f"DIAGNOSTIC: Error checking providers: {e}")
+    print(f"DIAGNOSTIC: ORT Providers: {ort.get_available_providers()}")
+except:
+    pass
 
 def download_file(url, save_path):
     print(f"DEBUG: Downloading {url}")
     try:
-        r = requests.get(url, stream=True, timeout=60)
-        r.raise_for_status()
+        r = requests.get(url, stream=True)
         with open(save_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-    except Exception as e:
-        print(f"ERROR: {str(e)}")
+            for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
+    except Exception as e: print(f"ERROR: {e}")
 
 def handler(job):
     job_input = job.get('input', job)
-    source_url = job_input.get('source')
-    target_url = job_input.get('target')
-
     source_p, target_p, output_p = "/app/source.jpg", "/app/target.mp4", "/app/output.mp4"
     if os.path.exists(output_p): os.remove(output_p)
 
-    download_file(source_url, source_p)
-    download_file(target_url, target_p)
+    download_file(job_input.get('source'), source_p)
+    download_file(job_input.get('target'), target_p)
 
-    # Запуск v207
     cmd = [
         "python3", "run.py", "headless-run",
-        "-s", source_p,
-        "-t", target_p,
-        "-o", output_p,
+        "-s", source_p, "-t", target_p, "-o", output_p,
         "--processors", "face_swapper",
         "--execution-providers", "cuda",
         "--skip-download"
     ]
 
-    print(f"DEBUG: Running: {' '.join(cmd)}")
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    
     for line in process.stdout:
         print(f"FACEFUSION_LOG: {line.strip()}")
         sys.stdout.flush()
-    
     process.wait()
 
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
-    return {"status": "error", "msg": "CUDA still missing in choices."}
+    return {"status": "error", "msg": "CUDA check failed again."}
 
 runpod.serverless.start({"handler": handler})
