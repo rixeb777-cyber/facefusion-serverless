@@ -14,9 +14,9 @@ RUN apt-get update && apt-get install -y \
 # 2. Клонируем проект (как мы и договаривались)
 RUN git clone --depth 1 https://github.com/facefusion/facefusion.git .
 
-# 3. Установка библиотек С ГАРАНТИЕЙ
+# 3. Установка библиотек (Добавляем scipy и другие недостающие части)
 RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install --no-cache-dir runpod requests opencv-python onnxruntime-gpu && \
+    python3 -m pip install --no-cache-dir runpod requests opencv-python onnxruntime-gpu scipy numba scikit-learn && \
     python3 -m pip install --no-cache-dir -r requirements.txt --ignore-installed || true
 
 # 4. Создаем наш пусковой run.py
