@@ -25,28 +25,26 @@ def handler(job):
     target_p = "/app/target.mp4"
     output_p = "/app/output.mp4"
 
-    # Предварительная очистка, чтобы не получить старый результат
     if os.path.exists(output_p):
         os.remove(output_p)
 
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # ОБНОВЛЕННАЯ КОМАНДА ДЛЯ FACEFUSION 3.0.0
-    # Мы добавляем 'run' перед всеми параметрами
+    # ФОРМАТ КОМАНДЫ ДЛЯ FACEFUSION 3.0.0
     cmd = [
-        "python3", "run.py", "run", 
+        "python3", "run.py", "headless-run",
+        "-s", source_p,
+        "-t", target_p,
+        "-o", output_p,
         "--processors", "face_swapper",
-        "--source", source_p,
-        "--target", target_p,
-        "--output", output_p,
-        "--skip-download" # Чтобы он не пытался качать модели сам (они у нас уже есть)
+        "--execution-providers", "cuda",
+        "--skip-download"
     ]
 
     print(f"DEBUG: Running command: {' '.join(cmd)}")
     
     try:
-        # Запуск и вывод логов
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         
         for line in process.stdout:
@@ -60,10 +58,8 @@ def handler(job):
         print(f"CRASH: {str(e)}")
 
     if os.path.exists(output_p):
-        # Здесь ты потом добавишь загрузку файла в облако, 
-        # но для теста — убедимся, что файл просто создался
-        return {"status": "success", "message": "Video processed!", "output_file": output_p}
+        return {"status": "success", "message": "Ready!", "output": output_p}
     else:
-        return {"status": "error", "msg": "FaceFusion finished but output file was not created. Check logs above."}
+        return {"status": "error", "msg": "Output file not found. Check FACEFUSION_LOG above."}
 
 runpod.serverless.start({"handler": handler})
