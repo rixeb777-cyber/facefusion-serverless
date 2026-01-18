@@ -17,11 +17,10 @@ RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 opencv-python numpy==1.24.3 && \
     python3 -m pip install --no-cache-dir -r requirements.txt || true
 
-# 4. Предварительная загрузка моделей (Своппер + Детектор)
-# Это нужно, чтобы FaceFusion не пытался скачать их во время работы
+# 4. Предварительная загрузка моделей из официального зеркала (v187)
 RUN mkdir -p /root/.facefusion/models && \
-    curl -L -o /root/.facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx && \
-    curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/yoloface_8n.onnx
+    curl -L -o /root/.facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
+    curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx
 
 # 5. Исправленное создание run.py (без SyntaxError)
 # Записываем строки по одной, чтобы избежать проблем с переносами символов
