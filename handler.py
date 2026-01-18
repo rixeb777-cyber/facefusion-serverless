@@ -31,7 +31,7 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Запуск v199
+    # Запуск v200
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
@@ -55,8 +55,8 @@ def handler(job):
         print(f"CRASH: {str(e)}")
 
     if os.path.exists(output_p):
-        return {"status": "success", "message": "Video processed!", "output": output_p}
+        return {"status": "success", "message": "Done!", "output": output_p}
     else:
-        return {"status": "error", "msg": "Check logs for CUDA errors."}
+        return {"status": "error", "msg": "Check logs for CUDA issues."}
 
 runpod.serverless.start({"handler": handler})
