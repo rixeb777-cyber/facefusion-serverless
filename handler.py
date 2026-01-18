@@ -5,72 +5,47 @@ import os
 import sys
 
 def download_file(url, save_path):
-    print(f"DEBUG: Starting download from {url} to {save_path}")
+    print(f"DEBUG: Downloading {url}")
     try:
-        response = requests.get(url, stream=True, timeout=30)
+        response = requests.get(url, stream=True, timeout=60)
         if response.status_code == 200:
             with open(save_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            print(f"DEBUG: Download successful: {save_path}")
+            print(f"DEBUG: Saved to {save_path}")
         else:
-            print(f"ERROR: Download failed. HTTP Status: {response.status_code}")
+            print(f"ERROR: HTTP {response.status_code}")
     except Exception as e:
-        print(f"ERROR: Exception during download: {str(e)}")
+        print(f"ERROR: {str(e)}")
 
 def handler(job):
-    job_input = job['input']
+    job_input = job.get('input', job)
     source_url = job_input.get('source')
     target_url = job_input.get('target')
 
-    source_path = "/app/source.jpg"
-    target_path = "/app/target.mp4"
-    output_path = "/app/output.mp4"
+    source_path, target_path, output_path = "/app/source.jpg", "/app/target.mp4", "/app/output.mp4"
 
-    # 1. Скачивание
     download_file(source_url, source_path)
     download_file(target_url, target_path)
 
-    # 2. Формируем команду с DEBUG-логированием
     command = [
-        "python3", "run.py",
-        "--processors", "face_swapper",
-        "-s", source_path,
-        "-t", target_path,
-        "-o", output_path,
-        "--headless",
-        "--log-level", "debug"  # <--- ВОТ ЭТО ДАСТ НАМ ВСЕ ПОДРОБНОСТИ
+        "python3", "run.py", "--processors", "face_swapper",
+        "-s", source_path, "-t", target_path, "-o", output_path,
+        "--headless", "--log-level", "debug"
     ]
 
-    print(f"DEBUG: Executing command: {' '.join(command)}")
-
+    print(f"DEBUG: Starting FaceFusion...")
     try:
-        # Используем Popen для вывода логов в реальном времени
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Склеиваем ошибки и обычный текст
-            text=True,
-            bufsize=1
-        )
-
-        # Печатаем каждую строку, которую выдает нейронка
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         for line in process.stdout:
-            print(f"FACEFUSION_LOG: {line.strip()}")
-            sys.stdout.flush() # Принудительно отправляем в консоль RunPod
-
+            print(f"FACEFUSION: {line.strip()}")
+            sys.stdout.flush()
         process.wait()
-        
-        if process.returncode != 0:
-            print(f"ERROR: Process exited with code {process.returncode}")
-
     except Exception as e:
-        print(f"ERROR: Subprocess crash: {str(e)}")
+        print(f"CRASH: {str(e)}")
 
     if os.path.exists(output_path):
-        return {"status": "success", "output_file": output_path}
-    else:
-        # Если файла нет, возвращаем статус ошибки для дебага
-        return {"status": "failed", "message": "Look at the logs for 'FACEFUSION_LOG' entries"}
+        return {"status": "success", "file": output_path}
+    return {"status": "failed", "check_logs": "true"}
 
 runpod.serverless.start({"handler": handler})
