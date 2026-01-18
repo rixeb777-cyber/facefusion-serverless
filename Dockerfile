@@ -1,32 +1,27 @@
-FROM runpod/base:0.4.0-cuda11.8.0
+# Используем официальный образ NVIDIA, где CUDA уже настроена идеально
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 WORKDIR /app
 
-# 1. Системные зависимости
+# 1. Системные либы + Python
 RUN apt-get update && apt-get install -y \
-    ffmpeg libsm6 libxext6 libgl1-mesa-glx git curl libgomp1 \
-    gfortran libopenblas-dev liblapack-dev libglib2.0-0 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    python3 python3-pip ffmpeg libsm6 libxext6 libgl1-mesa-glx git curl libgomp1 \
+    libglib2.0-0 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 2. Клонируем стабильную ветку
+# 2. Клонируем FaceFusion 3.0.0
 RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git .
 
-# 3. Python и библиотеки
+# 3. Установка библиотек
 RUN python3 -m pip install --upgrade pip
-
-# УДАЛЯЕМ всё лишнее и ставим правильный ONNX для CUDA 11.8
-RUN python3 -m pip uninstall -y onnxruntime onnxruntime-gpu && \
-    python3 -m pip install --no-cache-dir \
+RUN python3 -m pip install --no-cache-dir \
     numpy==1.24.3 \
-    scipy==1.10.1 \
-    opencv-python-headless==4.10.0.84 \
     onnxruntime-gpu==1.17.1 \
     runpod requests gdown
 
-# Доустанавливаем из requirements, игнорируя ошибки версий
+# Ставим зависимости из файла
 RUN python3 -m pip install --no-cache-dir -r requirements.txt || echo "Done"
 
-# 4. Модели и ссылки
+# 4. Модели
 RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
     curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx
@@ -41,9 +36,9 @@ COPY handler.py /app/handler.py
 ENV PYTHONPATH="/app"
 ENV HOME="/root"
 
-# ЖЁСТКО прописываем пути к библиотекам CUDA
+# Жёсткие пути для NVIDIA
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-ENV CUDA_PATH=/usr/local/cuda
-ENV PATH="/usr/local/cuda/bin:${PATH}"
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 CMD [ "python3", "-u", "handler.py" ]

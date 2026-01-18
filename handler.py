@@ -31,7 +31,7 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Запуск v200
+    # Команда v201
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
@@ -50,13 +50,12 @@ def handler(job):
             print(f"FACEFUSION_LOG: {line.strip()}")
             sys.stdout.flush()
         process.wait()
-        print(f"DEBUG: Process finished with code {process.returncode}")
     except Exception as e:
         print(f"CRASH: {str(e)}")
 
     if os.path.exists(output_p):
-        return {"status": "success", "message": "Done!", "output": output_p}
+        return {"status": "success", "output": output_p}
     else:
-        return {"status": "error", "msg": "Check logs for CUDA issues."}
+        return {"status": "error", "msg": "Look at logs above."}
 
 runpod.serverless.start({"handler": handler})
