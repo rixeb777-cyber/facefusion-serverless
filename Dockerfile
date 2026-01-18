@@ -22,7 +22,7 @@ RUN mkdir -p /root/.facefusion/models && \
 # 5. Создаем run.py
 RUN printf "from facefusion import core\nif __name__ == '__main__':\n    core.cli()" > /app/run.py
 
-# 6. Возвращаем оригинальный рабочий handler.py (НЕ тестовый!)
+# 6. Возвращаем оригинальный рабочий handler.py
 COPY handler.py /app/handler.py
 RUN chmod +x /app/run.py
 
