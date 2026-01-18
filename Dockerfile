@@ -14,12 +14,12 @@ RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.
 # 3. Установка Python-пакетов
 RUN python3 -m pip install --upgrade pip
 
-# Устанавливаем базу (NumPy 1.24 + OpenCV 4.10)
+# Устанавливаем базу (v198: Обновленный ONNX для работы с CUDA)
 RUN python3 -m pip install --no-cache-dir \
     numpy==1.24.3 \
     scipy==1.10.1 \
     opencv-python-headless==4.10.0.84 \
-    onnxruntime-gpu==1.15.1 \
+    onnxruntime-gpu==1.17.1 \
     runpod requests gdown
 
 # Доставляем зависимости из реквизитов
@@ -30,8 +30,7 @@ RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
     curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx
 
-# --- ВОТ СЮДА МЫ ВСТАВИЛИ СИМВОЛИЧЕСКИЕ ССЫЛКИ ---
-# Это нужно, чтобы программа видела модели под теми именами, которые она ожидает
+# Символические ссылки для совместимости имен
 RUN ln -s /root/.facefusion/models/inswapper_128_fp16.onnx /root/.facefusion/models/inswapper_128.onnx || true
 RUN ln -s /root/.facefusion/models/yoloface_8n.onnx /root/.facefusion/models/yoloface_8n.onnx || true
 
@@ -42,5 +41,7 @@ COPY handler.py /app/handler.py
 ENV PYTHONPATH="/app"
 ENV HOME="/root"
 
-# Самая последняя строчка остается без изменений
+# КРУТО: Добавляем путь к библиотекам CUDA, чтобы FaceFusion их увидел
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
 CMD [ "python3", "-u", "handler.py" ]
