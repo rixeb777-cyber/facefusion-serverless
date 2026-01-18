@@ -2,8 +2,8 @@ FROM runpod/base:0.4.0-cuda11.8.0
 
 WORKDIR /app
 
-# 1. Системные зависимости
-RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 libgl1-mesa-glx git wget && \
+# 1. Системные зависимости (Добавили curl)
+RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 libgl1-mesa-glx git curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 2. Клонируем проект
@@ -11,12 +11,12 @@ RUN git clone --depth 1 https://github.com/facefusion/facefusion.git .
 
 # 3. Установка библиотек
 RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install --no-cache-dir runpod requests opencv-python onnxruntime-gpu scipy numba scikit-learn && \
+    python3 -m pip install --no-cache-dir runpod requests opencv-python onnxruntime-gpu scipy numba scikit-learn gdown && \
     python3 -m pip install --no-cache-dir -r requirements.txt --ignore-installed || true
 
-# 4. СКАЧИВАЕМ МОДЕЛЬ ЗАРАНЕЕ (Чтобы не было ошибки face_swapper)
+# 4. СКАЧИВАЕМ МОДЕЛЬ ЧЕРЕЗ CURL (Исправлено для v160)
 RUN mkdir -p .facefusion/models && \
-    wget -O .facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx
+    curl -L -o .facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx
 
 # 5. Создаем run.py
 RUN printf "from facefusion import core\nif __name__ == '__main__':\n    core.cli()" > /app/run.py
