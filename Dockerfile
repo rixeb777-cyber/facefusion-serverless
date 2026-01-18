@@ -14,8 +14,8 @@ RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir runpod requests && \
     python3 -m pip install --no-cache-dir -r requirements.txt --ignore-installed || true
 
-# 4. Создаем run.py (наш пусковой файл)
-RUN echo 'from facefusion import core\nif __name__ == "__main__":\n    core.cli()' > /app/run.py
+# 4. СОЗДАЕМ run.py (Исправленная версия v135)
+RUN printf "from facefusion import core\nif __name__ == '__main__':\n    core.cli()" > /app/run.py
 
 # 5. Копируем твой handler.py
 COPY handler.py /app/handler.py
