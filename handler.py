@@ -21,44 +21,46 @@ def handler(job):
     source_url = job_input.get('source')
     target_url = job_input.get('target')
 
-    # Пути внутри контейнера
     source_p = "/app/source.jpg"
     target_p = "/app/target.mp4"
     output_p = "/app/output.mp4"
 
-    # 1. Скачиваем файлы пользователя
+    # Создаем папки для моделей на всякий случай
+    os.makedirs("/root/.facefusion/models", exist_ok=True)
+
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # 2. Команда запуска (ОБНОВЛЕННАЯ)
+    # Упрощенная команда для теста стабильности
     cmd = [
         "python3", "run.py",
         "--processors", "face_swapper",
-        "-s", source_p,
-        "-t", target_p,
-        "-o", output_p,
-        "--headless",
-        "--log-level", "debug",
-        "--skip-download"
+        "--source", source_p,
+        "--target", target_p,
+        "--output", output_p,
+        "--headless"
     ]
 
-    print("DEBUG: Running FaceFusion...")
+    print(f"DEBUG: Running command: {' '.join(cmd)}")
+    
     try:
-        # Запускаем и транслируем логи в консоль RunPod
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        # bufsize=1 и универсальные переносы строк для мгновенного вывода логов
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        
+        # Читаем логи В РЕАЛЬНОМ ВРЕМЕНИ
         for line in process.stdout:
-            print(f"LOG: {line.strip()}")
+            print(f"FACEFUSION_LOG: {line.strip()}")
             sys.stdout.flush()
+        
         process.wait()
+        print(f"DEBUG: Process finished with code {process.returncode}")
+
     except Exception as e:
         print(f"CRASH: {str(e)}")
 
-    # 3. Проверка и возврат результата
     if os.path.exists(output_p):
-        print(f"DEBUG: Success! Output found at {output_p}")
         return {"status": "success", "file": output_p}
     else:
-        print("ERROR: FaceFusion finished but no output file was created.")
         return {"status": "error", "msg": "Output file not found"}
 
 runpod.serverless.start({"handler": handler})
