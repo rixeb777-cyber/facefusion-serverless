@@ -14,18 +14,20 @@ RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir runpod requests opencv-python onnxruntime-gpu scipy numba scikit-learn gdown && \
     python3 -m pip install --no-cache-dir -r requirements.txt --ignore-installed || true
 
-# 4. СКАЧИВАЕМ МОДЕЛЬ (Исправлено для v165)
-# Создаем папки и качаем модель сразу в корень и в профиль
-RUN mkdir -p .facefusion/models && \
-    curl -L -o .facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx && \
-    cp .facefusion/models/inswapper_128.onnx /app/inswapper_128.onnx
+# 4. РАСКЛАДЫВАЕМ МОДЕЛЬ ПО НУЖНЫМ АДРЕСАМ (v180)
+# Создаем скрытую папку в /root и кладем туда модель
+RUN mkdir -p /root/.facefusion/models && \
+    curl -L -o /root/.facefusion/models/inswapper_128.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx
 
 # 5. Создаем run.py
 RUN printf "from facefusion import core\nif __name__ == '__main__':\n    core.cli()" > /app/run.py
 
+# 6. Возвращаем оригинальный рабочий handler.py (НЕ тестовый!)
 COPY handler.py /app/handler.py
 RUN chmod +x /app/run.py
 
 ENV PYTHONPATH="/app"
+# Принудительно ставим домашнюю директорию
+ENV HOME="/root"
 
 CMD [ "python3", "-u", "handler.py" ]
