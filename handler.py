@@ -26,26 +26,29 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Запуск v205
+    # Пробуем запустить v206
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
         "-t", target_p,
         "-o", output_p,
         "--processors", "face_swapper",
-        "--execution-providers", "cuda", 
+        "--execution-providers", "cuda",
         "--skip-download"
     ]
 
     print(f"DEBUG: Running: {' '.join(cmd)}")
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    
     for line in process.stdout:
         print(f"FACEFUSION_LOG: {line.strip()}")
         sys.stdout.flush()
+    
     process.wait()
 
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
-    return {"status": "error", "msg": "Look at logs."}
+    else:
+        return {"status": "error", "msg": "CUDA failure. Check logs."}
 
 runpod.serverless.start({"handler": handler})
