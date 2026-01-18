@@ -31,3 +31,4 @@ jobs:
           context: .
           push: true
           tags: rixeb/facefusion-serverless:v184
+          
