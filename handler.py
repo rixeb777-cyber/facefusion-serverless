@@ -4,6 +4,13 @@ import requests
 import os
 import sys
 
+# Проверка CUDA перед стартом
+try:
+    import onnxruntime as ort
+    print(f"DIAGNOSTIC: Available Providers: {ort.get_available_providers()}")
+except Exception as e:
+    print(f"DIAGNOSTIC: Error checking providers: {e}")
+
 def download_file(url, save_path):
     print(f"DEBUG: Downloading {url}")
     try:
@@ -26,7 +33,7 @@ def handler(job):
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # Пробуем запустить v206
+    # Запуск v207
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p,
@@ -48,7 +55,6 @@ def handler(job):
 
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
-    else:
-        return {"status": "error", "msg": "CUDA failure. Check logs."}
+    return {"status": "error", "msg": "CUDA still missing in choices."}
 
 runpod.serverless.start({"handler": handler})
