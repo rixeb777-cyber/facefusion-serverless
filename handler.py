@@ -26,17 +26,26 @@ def handler(job):
     target_p = "/app/target.mp4"
     output_p = "/app/output.mp4"
 
-    # 1. Скачиваем
+    # 1. Скачиваем файлы пользователя
     download_file(source_url, source_p)
     download_file(target_url, target_p)
 
-    # 2. Команда (без лишних переносов строк)
-    cmd = ["python3", "run.py", "--processors", "face_swapper", "-s", source_p, "-t", target_p, "-o", output_p, "--headless", "--log-level", "debug"]
+    # 2. Команда запуска (ОБНОВЛЕННАЯ)
+    cmd = [
+        "python3", "run.py",
+        "--processors", "face_swapper",
+        "-s", source_p,
+        "-t", target_p,
+        "-o", output_p,
+        "--headless",
+        "--log-level", "debug",
+        "--skip-download"
+    ]
 
     print("DEBUG: Running FaceFusion...")
     try:
-        # Запускаем и ловим всё в реальном времени
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        # Запускаем и транслируем логи в консоль RunPod
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         for line in process.stdout:
             print(f"LOG: {line.strip()}")
             sys.stdout.flush()
@@ -44,10 +53,12 @@ def handler(job):
     except Exception as e:
         print(f"CRASH: {str(e)}")
 
-    # 3. Проверка результата
+    # 3. Проверка и возврат результата
     if os.path.exists(output_p):
+        print(f"DEBUG: Success! Output found at {output_p}")
         return {"status": "success", "file": output_p}
     else:
+        print("ERROR: FaceFusion finished but no output file was created.")
         return {"status": "error", "msg": "Output file not found"}
 
 runpod.serverless.start({"handler": handler})
