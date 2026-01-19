@@ -18,29 +18,27 @@ def handler(job):
     download_file(job_input.get('source'), source_p)
     download_file(job_input.get('target'), target_p)
 
-    # v213 ТАКТИКА: Сначала пробуем CUDA, если ругается - пробуем авто-режим
-    # Мы убрали принудительный список провайдеров, чтобы дать программе шанс самой найти GPU
+    # v214: Теперь запускаем с CUDA на полную мощность!
     cmd = [
         "python3", "run.py", "headless-run",
         "-s", source_p, "-t", target_p, "-o", output_p,
         "--processors", "face_swapper",
+        "--execution-providers", "cuda",
         "--skip-download"
     ]
 
-    print(f"DEBUG: Executing: {' '.join(cmd)}")
+    print(f"DEBUG: Running FaceSwap on GPU...")
     
-    # Добавляем переменные окружения прямо в процесс
-    my_env = os.environ.copy()
-    my_env["ONNXRUNTIME_EXECUTION_PROVIDERS"] = "CUDAExecutionProvider"
-
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=my_env)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in process.stdout:
-        print(f"FACEFUSION_LOG: {line.strip()}")
-        sys.stdout.flush()
+        # Убираем лишний мусор из логов, оставляем только важное
+        if "Processing" in line or "Analyzing" in line:
+            print(f"FACEFUSION_LOG: {line.strip()}")
+            sys.stdout.flush()
     process.wait()
 
     if os.path.exists(output_p):
         return {"status": "success", "output": output_p}
-    return {"status": "error", "msg": "Process finished but no file found."}
+    return {"status": "error", "msg": "Processing failed. Check worker logs."}
 
 runpod.serverless.start({"handler": handler})
