@@ -95,12 +95,13 @@ def process_facefusion(job):
         
         # Формирование команды для запуска FaceFusion
         # ВАЖНО: Используем facefusion.py, а не run.py!
+        # ТУРБО-КОМАНДА ДЛЯ GPU
         command = [
             "python", "facefusion.py",
             "headless-run",
             "--execution-providers", "cuda",
-            "--execution-thread-count", "10",  # Увеличиваем количество потоков (для A4500 оптимально 10-12)
-            "--execution-queue-count", "2",     # Даем видеокарте очередь задач, чтобы она не простаивала
+            "--execution-thread-count", "12",  # Увеличиваем нагрузку на GPU
+            "--execution-queue-count", "2",    # Создаем очередь задач для видеокарты
             "--processors", "face_swapper",
             "-s", source_path,
             "-t", target_path,
