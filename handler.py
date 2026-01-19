@@ -106,9 +106,8 @@ def process_facefusion(job):
             "--video-memory-strategy", "strict",
             "--execution-thread-count", "4",
             "--face-detector-angles", "0", "90", "180", "270",
-            "--skip-download",
-            "--skip-content-analyser",  # ВОТ ОН! Этот флаг убивает проверку open_nsfw
-            "--output-video-quality", "60"
+            "--content-analyser-model", "none",  # ВОТ ОНО! Отключает проверку NSFW
+            "--skip-download"                     # Не лезть в сеть
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
