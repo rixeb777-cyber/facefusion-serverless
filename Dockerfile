@@ -35,7 +35,13 @@ RUN pip install --no-cache-dir \
     "tqdm>=4.66.0" \
     "requests>=2.31.0" \
     "insightface>=0.7.3" \
-    "onnx>=1.15.0,<2.0.0"
+    "onnx>=1.15.0,<2.0.0" \
+    "filetype" \
+    "pyyaml" \
+    "protobuf" \
+    "gdown" \
+    "inquirer" \
+    "gradio"
 
 # ВАЖНО: Не используем requirements.txt и install.py, так как они переустанавливают onnxruntime!
 # Вместо этого устанавливаем только то что нужно FaceFusion
