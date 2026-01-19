@@ -8,7 +8,6 @@ WORKDIR /app
 
 RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git .
 
-# Установка библиотек с фиксацией версий
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir \
     "numpy==1.26.4" \
@@ -20,17 +19,14 @@ RUN pip install --upgrade pip && \
     "onnx>=1.15.0,<2.0.0" \
     "gradio" "runpod" "tqdm" "requests" "filetype" "pyyaml" "protobuf"
 
-# ==============================================================================
-# ЖЕСТКИЙ ФИКС ПУТЕЙ (Чтобы точно видело GPU)
-# ==============================================================================
-# Создаем символические ссылки, чтобы система видела библиотеки как родные
-RUN ln -s /usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn.so.8 /usr/lib/libcudnn.so.8 && \
-    ln -s /usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11 /usr/lib/libcublas.so.11 && \
-    ln -s /usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublasLt.so.11 /usr/lib/libcublasLt.so.11
+# Фикс путей CUDA
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib:/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib:$LD_LIBRARY_PATH
+# Ссылки для ONNX
+RUN ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn.so.8 /usr/lib/libcudnn.so.8 && \
+    ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11 /usr/lib/libcublas.so.11
 
-# Предзагрузка моделей
+# Скачивание моделей внутрь
 RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128_fp16.onnx && \
     curl -L -o /root/.facefusion/models/open_nsfw.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/open_nsfw.onnx && \
