@@ -4,81 +4,167 @@ import os
 import sys
 import urllib.request
 import onnxruntime
-import time
 
-# Диагностика при старте
-print("=== DIAGNOSTICS ===")
+# ============================================================
+# ДИАГНОСТИКА CUDA ПРИ ЗАПУСКЕ
+# ============================================================
+print("=" * 60)
+print("🔍 ДИАГНОСТИКА ONNX RUNTIME")
+print("=" * 60)
+
 providers = onnxruntime.get_available_providers()
-print(f"Available Providers: {providers}")
-print(f"CUDA Active: {'CUDAExecutionProvider' in providers}")
-print("===================")
+print("Доступные провайдеры:", providers)
+print("CUDA доступна:", "CUDAExecutionProvider" in providers)
+print("=" * 60)
+
+# Проверка переменных окружения
+print("📋 ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ:")
+print(f"LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH', '❌ Не установлена')}")
+print(f"CUDA_HOME: {os.environ.get('CUDA_HOME', '❌ Не установлена')}")
+print("=" * 60)
+sys.stdout.flush()
+
 
 def download_file(url, output_path):
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    """
+    Скачивание файла по URL с отображением прогресса
+    """
     try:
-        print(f"Downloading {url}...")
+        print(f"📥 Скачиваю файл: {url}")
         urllib.request.urlretrieve(url, output_path)
+        print(f"✅ Файл сохранен: {output_path}")
         return output_path
     except Exception as e:
-        print(f"Download Error: {e}")
+        print(f"❌ Ошибка при скачивании: {str(e)}")
         raise
 
+
 def process_facefusion(job):
+    """
+    Основной обработчик задачи FaceFusion
+    
+    Ожидаемые параметры в job['input']:
+    - source: URL фотографии источника (лицо для замены)
+    - target: URL видео цели (куда вставляем лицо)
+    
+    Возвращает:
+    - success: True/False
+    - output_path: путь к результату (если успешно)
+    - error: описание ошибки (если провал)
+    """
     try:
+        print("\n" + "=" * 60)
+        print("🚀 НАЧАЛО ОБРАБОТКИ ЗАДАЧИ")
+        print("=" * 60)
+        
         job_input = job["input"]
         source_url = job_input.get("source")
         target_url = job_input.get("target")
         
-        # Рабочие пути
-        source_path = "/tmp/input/source.jpg"
-        target_path = "/tmp/input/target.mp4"
-        output_path = "/tmp/output/output.mp4"
+        # Валидация входных данных
+        if not source_url or not target_url:
+            error_msg = "❌ Не указаны обязательные параметры 'source' или 'target'"
+            print(error_msg)
+            return {"error": error_msg}
         
-        # Очистка и создание папок
+        print(f"📸 Source URL: {source_url}")
+        print(f"🎬 Target URL: {target_url}")
+        
+        # Создание временных директорий
         os.makedirs("/tmp/input", exist_ok=True)
         os.makedirs("/tmp/output", exist_ok=True)
-        if os.path.exists(output_path): os.remove(output_path)
         
-        # Загрузка файлов
+        # Определение путей к файлам
+        source_path = "/tmp/input/source.jpg"
+        target_path = "/tmp/input/target.mp4"
+        output_path = "/tmp/output/result.mp4"
+        
+        # Скачивание исходных файлов
+        print("\n📥 СКАЧИВАНИЕ ФАЙЛОВ:")
         download_file(source_url, source_path)
         download_file(target_url, target_path)
         
-        # Команда запуска (именно run.py для версии 3.0)
+        # Формирование команды для запуска FaceFusion
+        # ВАЖНО: --execution-providers cuda для GPU ускорения
         command = [
-            "python", "run.py", "headless-run",
-            "-s", source_path,
-            "-t", target_path,
-            "-o", output_path,
-            "--processors", "face_swapper",
-            "--execution-providers", "cuda",
-            "--skip-download"
+            "python", "run.py",
+            "--execution-providers", "cuda",  # Принудительно используем CUDA
+            "--headless-run",                 # Режим без GUI
+            "-s", source_path,                # Исходное фото
+            "-t", target_path,                # Целевое видео
+            "-o", output_path                 # Выходной файл
         ]
         
-        print(f"Starting FaceFusion: {' '.join(command)}")
+        print("\n🔧 КОМАНДА ЗАПУСКА:")
+        print(" ".join(command))
+        print("\n⏳ Обработка началась (макс. 5 минут)...")
+        sys.stdout.flush()
         
+        # Запуск процесса FaceFusion с увеличенным таймаутом для первого запуска
+        # (может потребоваться время на скачивание моделей)
         result = subprocess.run(
             command,
             cwd="/app",
             capture_output=True,
             text=True,
-            timeout=600 # Увеличили до 10 минут
+            timeout=600  # Таймаут 10 минут для первого запуска с загрузкой моделей
         )
         
-        print("STDOUT:", result.stdout)
+        # Вывод логов в RunPod
+        print("\n📄 STDOUT:")
+        print(result.stdout)
+        if result.stderr:
+            print("\n⚠️ STDERR:")
+            print(result.stderr)
         
-        if os.path.exists(output_path):
-            size = os.path.getsize(output_path)
+        sys.stdout.flush()
+        
+        # Проверка кода возврата
+        if result.returncode != 0:
             return {
-                "success": True,
-                "message": f"Generated! Size: {size} bytes",
-                "output_path": output_path,
-                "diagnostics": providers
+                "error": "Процесс FaceFusion завершился с ошибкой",
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
             }
-        else:
-            return {"error": "Output file not found", "stderr": result.stderr}
-            
+        
+        # Проверка создания выходного файла
+        if not os.path.exists(output_path):
+            return {"error": "Выходной файл не был создан"}
+        
+        file_size = os.path.getsize(output_path)
+        print(f"\n✅ УСПЕХ! Файл создан: {output_path}")
+        print(f"📦 Размер файла: {file_size / 1024 / 1024:.2f} MB")
+        
+        # Здесь можно добавить загрузку результата в S3/R2 storage
+        # и вернуть публичный URL вместо локального пути
+        
+        return {
+            "success": True,
+            "output_path": output_path,
+            "file_size_mb": round(file_size / 1024 / 1024, 2),
+            "message": "Обработка успешно завершена"
+        }
+        
+    except subprocess.TimeoutExpired:
+        error_msg = "⏱️ Превышен таймаут обработки (10 минут)"
+        print(error_msg)
+        return {"error": error_msg}
     except Exception as e:
-        return {"error": str(e)}
+        error_msg = f"❌ Неожиданная ошибка: {str(e)}"
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
+        return {"error": error_msg}
 
+
+# ============================================================
+# ЗАПУСК RUNPOD SERVERLESS HANDLER
+# ============================================================
 if __name__ == "__main__":
+    print("\n" + "=" * 60)
+    print("🎯 ЗАПУСК FACEFUSION RUNPOD HANDLER")
+    print("=" * 60)
+    sys.stdout.flush()
+    
     runpod.serverless.start({"handler": process_facefusion})
