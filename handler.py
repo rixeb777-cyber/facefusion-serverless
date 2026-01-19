@@ -102,12 +102,13 @@ def process_facefusion(job):
             "--source", source_path,
             "--target", target_path,
             "--output-path", output_path,
-            "--processors", "face_swapper",
+            "--processors", "face_swapper", # Оставляем только замену лиц, без nsfw-фильтра
             "--execution-providers", "cuda",
             "--video-memory-strategy", "strict",
-            "--execution-thread-count", "1",      # Твоя стабильная единица
+            "--execution-thread-count", "1",
             "--face-detector-angles", "0", "90", "180", "270",
-            "--skip-download"                     # ПРОПУСКАЕМ ЗАГРУЗКИ И ПРОВЕРКИ
+            "--skip-download",               # Игнорировать проверку хешей и докачку
+            "--no-confirm"                   # Не ждать подтверждений
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
