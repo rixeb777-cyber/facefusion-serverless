@@ -103,11 +103,8 @@ def process_facefusion(job):
             "--output-path", output_path,
             "--processors", "face_swapper",
             "--execution-providers", "cuda",
-            "--video-memory-strategy", "strict",
-            "--execution-thread-count", "4",
-            "--face-detector-angles", "0", "90", "180", "270",
-            "--content-analyser-model", "none",  # ВОТ ОНО! Отключает проверку NSFW
-            "--skip-download"                     # Не лезть в сеть
+            "--execution-thread-count", "4",  # Золотая середина для RTX A4500
+            "--skip-download"                # ОБЯЗАТЕЛЬНО: чтобы не падал на open_nsfw
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
