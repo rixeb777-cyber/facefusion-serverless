@@ -12,7 +12,16 @@ print("=" * 60)
 print("🔍 ДИАГНОСТИКА ONNX RUNTIME")
 print("=" * 60)
 
+import numpy as np
+print(f"NumPy версия: {np.__version__}")
+if np.__version__.startswith('2.'):
+    print("❌ КРИТИЧЕСКАЯ ОШИБКА: NumPy 2.x установлена!")
+    print("   Требуется NumPy 1.26.4")
+else:
+    print("✅ NumPy версия корректная")
+
 providers = onnxruntime.get_available_providers()
+print(f"ONNX Runtime версия: {onnxruntime.__version__}")
 print("Доступные провайдеры:", providers)
 print("CUDA доступна:", "CUDAExecutionProvider" in providers)
 print("=" * 60)

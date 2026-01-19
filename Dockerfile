@@ -17,27 +17,29 @@ WORKDIR /app
 # Клонирование FaceFusion
 RUN git clone https://github.com/facefusion/facefusion.git .
 
-# Сначала устанавливаем numpy нужной версии
-RUN pip install --no-cache-dir numpy==1.26.4
+# КРИТИЧЕСКИ ВАЖНО: Удаляем все версии numpy и onnxruntime
+RUN pip uninstall -y numpy onnxruntime onnxruntime-gpu || true
 
-# Удаляем конфликтующие пакеты если есть
-RUN pip uninstall -y onnxruntime onnxruntime-gpu || true
+# Устанавливаем СТРОГО numpy 1.26.4 (НЕ 2.x!)
+RUN pip install --no-cache-dir "numpy==1.26.4"
 
-# Устанавливаем onnxruntime-gpu для CUDA 11.8
-RUN pip install --no-cache-dir onnxruntime-gpu==1.17.1
+# Устанавливаем onnxruntime-gpu строго совместимую с CUDA 11.8
+RUN pip install --no-cache-dir "onnxruntime-gpu==1.17.1"
 
-# Устанавливаем остальные зависимости, игнорируя конфликты версий
-RUN pip install --no-cache-dir -r requirements.txt --no-deps || true
-
-# Устанавливаем основные зависимости FaceFusion вручную
+# Устанавливаем основные зависимости с фиксацией версий
 RUN pip install --no-cache-dir \
-    opencv-python \
-    pillow \
-    tqdm \
-    requests \
-    gradio \
-    insightface \
-    onnx
+    "opencv-python>=4.8.0,<5.0.0" \
+    "pillow>=10.0.0,<11.0.0" \
+    "tqdm>=4.66.0" \
+    "requests>=2.31.0" \
+    "insightface>=0.7.3" \
+    "onnx>=1.15.0,<2.0.0"
+
+# Устанавливаем остальные зависимости без обновления numpy
+RUN pip install --no-cache-dir -r requirements.txt --no-deps --ignore-installed 2>/dev/null || true
+
+# ФИНАЛЬНАЯ ПРОВЕРКА: Принудительно откатываем numpy если что-то её обновило
+RUN pip uninstall -y numpy && pip install --no-cache-dir "numpy==1.26.4"
 
 # Установка RunPod SDK для работы с serverless
 RUN pip install --no-cache-dir runpod
