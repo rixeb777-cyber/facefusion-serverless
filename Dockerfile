@@ -20,11 +20,11 @@ RUN pip uninstall -y onnxruntime onnxruntime-gpu && \
 RUN mkdir -p /root/.facefusion/models && mkdir -p /.facefusion/models
 
 # Предзагрузка моделей (Ссылки обновлены до 3.0.0)
-RUN cd /root/.facefusion/models && \
-    wget -q https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
-    wget -q https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx && \
-    wget -q https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/arcface_w600k_r50.onnx && \
-    wget -q https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/face_landmarker_68_5.onnx
+RUN mkdir -p /root/.facefusion/models && cd /root/.facefusion/models && \
+    wget https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
+    wget https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx && \
+    wget https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/arcface_w600k_r50.onnx && \
+    wget https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/face_landmarker_68_5.onnx
 
 # Копируем модели в корень на всякий случай
 RUN cp -r /root/.facefusion/* /.facefusion/ || true
