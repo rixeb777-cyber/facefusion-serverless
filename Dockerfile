@@ -26,13 +26,13 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib:/us
 RUN ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn.so.8 /usr/lib/libcudnn.so.8 && \
     ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11 /usr/lib/libcublas.so.11
 
-# Скачивание моделей внутрь
+# Предзагрузка моделей с правильными путями для 3.0.0
 RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128_fp16.onnx && \
-    curl -L -o /root/.facefusion/models/open_nsfw.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/open_nsfw.onnx && \
     curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/yoloface_8n.onnx && \
-    curl -L -o /root/.facefusion/models/arcface_w600k_r50.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/arcface_w600k_r50.onnx && \
-    curl -L -o /root/.facefusion/models/gender_age.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/gender_age.onnx
+    curl -L -o /root/.facefusion/models/arcface_w600k_r50.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/arcface_w600k_r50.onnx
+# Мы специально НЕ качаем open_nsfw, чтобы он не спотыкался о хеш, 
+# и отключаем его в команде запуска через --content-analyser-model none
 
 COPY handler.py /app/handler.py
 CMD ["python", "-u", "handler.py"]

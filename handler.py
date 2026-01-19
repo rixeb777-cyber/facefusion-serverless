@@ -40,8 +40,9 @@ def handler(job):
             "--execution-providers", "cuda",
             "--processors", "face_swapper",
             "--execution-thread-count", "24",
-            "--video-memory-strategy", "tolerant",  # ЗАМЕНИЛИ high НА tolerant
-            "--skip-download",
+            "--video-memory-strategy", "tolerant",
+            "--skip-download", # Мы уже скачали модели в Dockerfile
+            "--content-analyser-model", "none", # Отключаем проверку NSFW, которая выдает ошибку
             "-s", source_path,
             "-t", target_path,
             "-o", output_path
