@@ -99,13 +99,15 @@ def process_facefusion(job):
         command = [
             "python", "facefusion.py",
             "headless-run",
-            "--execution-providers", "cuda",
-            "--execution-thread-count", "12",  # Увеличиваем нагрузку на GPU
-            "--execution-queue-count", "2",    # Создаем очередь задач для видеокарты
+            "--source", source_path,
+            "--target", target_path,
+            "--output-path", output_path,
             "--processors", "face_swapper",
-            "-s", source_path,
-            "-t", target_path,
-            "-o", output_path
+            "--execution-providers", "cuda",
+            "--video-memory-strategy", "strict", # ВОЗВРАЩАЕМ ЭТОТ ФЛАГ ДЛЯ СТАБИЛЬНОСТИ
+            "--execution-thread-count", "4",      # Пробуем 4 вместо 1 (золотая середина)
+            "--execution-queue-count", "1",
+            "--output-video-quality", "60"
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
