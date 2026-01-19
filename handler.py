@@ -102,8 +102,7 @@ def process_facefusion(job):
             "--processors", "face_swapper",
             "--execution-thread-count", "4",
             "--video-memory-strategy", "strict",
-            "--face-detector-angles", "0", "90", "180", "270",
-            "--skip-download", # Теперь это безопасно, так как модели в образе
+            # Мы УБРАЛИ --skip-download, чтобы он скачал inswapper сам в RunPod
             "-s", source_path,
             "-t", target_path,
             "-o", output_path
