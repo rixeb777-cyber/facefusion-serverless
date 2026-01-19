@@ -94,11 +94,11 @@ def process_facefusion(job):
         download_file(target_url, target_path)
         
         # Формирование команды для запуска FaceFusion
-        # ВАЖНО: --execution-providers cuda для GPU ускорения
+        # ВАЖНО: Используем facefusion.py, а не run.py!
         command = [
-            "python", "run.py",
+            "python", "facefusion.py",
+            "headless-run",                   # Режим без GUI
             "--execution-providers", "cuda",  # Принудительно используем CUDA
-            "--headless-run",                 # Режим без GUI
             "-s", source_path,                # Исходное фото
             "-t", target_path,                # Целевое видео
             "-o", output_path                 # Выходной файл
@@ -106,7 +106,7 @@ def process_facefusion(job):
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
         print(" ".join(command))
-        print("\n⏳ Обработка началась (макс. 5 минут)...")
+        print("\n⏳ Обработка началась (макс. 10 минут)...")
         sys.stdout.flush()
         
         # Запуск процесса FaceFusion с увеличенным таймаутом для первого запуска
