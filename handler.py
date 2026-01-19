@@ -100,10 +100,10 @@ def process_facefusion(job):
             "headless-run",
             "--execution-providers", "cuda",
             "--processors", "face_swapper",
-            "--execution-thread-count", "4",          # Чтобы GPU не ждал процессор
-            "--video-memory-strategy", "strict",     # Для стабильности RTX
-            "--face-detector-angles", "0", "90", "180", "270", # Заставляем GPU работать
-            "--skip-download",                       # Теперь файлы уже в образе!
+            "--execution-thread-count", "4",
+            "--video-memory-strategy", "strict",
+            "--face-detector-angles", "0", "90", "180", "270",
+            "--skip-download", # Теперь это безопасно, так как модели в образе
             "-s", source_path,
             "-t", target_path,
             "-o", output_path
