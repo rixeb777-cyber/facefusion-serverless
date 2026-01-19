@@ -98,7 +98,8 @@ def process_facefusion(job):
         command = [
             "python", "facefusion.py",
             "headless-run",                   # Режим без GUI
-            "--execution-providers", "cuda",  # Принудительно используем CUDA
+            "--execution-providers", "CUDAExecutionProvider",  # Правильное название для CUDA
+            "--processors", "face_swapper",   # Используем процессор замены лиц
             "-s", source_path,                # Исходное фото
             "-t", target_path,                # Целевое видео
             "-o", output_path                 # Выходной файл
