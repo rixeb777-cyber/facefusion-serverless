@@ -98,13 +98,15 @@ def process_facefusion(job):
         command = [
             "python", "facefusion.py",
             "headless-run",
-            "--source", source_path,
-            "--target", target_path,
-            "--output-path", output_path,
-            "--processors", "face_swapper",
             "--execution-providers", "cuda",
-            "--execution-thread-count", "4",  # Золотая середина для RTX A4500
-            "--skip-download"                # ОБЯЗАТЕЛЬНО: чтобы не падал на open_nsfw
+            "--processors", "face_swapper",
+            "--execution-thread-count", "4",          # Чтобы GPU не ждал процессор
+            "--video-memory-strategy", "strict",     # Для стабильности RTX
+            "--face-detector-angles", "0", "90", "180", "270", # Заставляем GPU работать
+            "--skip-download",                       # Теперь файлы уже в образе!
+            "-s", source_path,
+            "-t", target_path,
+            "-o", output_path
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
