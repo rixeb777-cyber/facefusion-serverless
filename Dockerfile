@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y \
 # Установка рабочей директории
 WORKDIR /app
 
-# Клонирование FaceFusion
-RUN git clone https://github.com/facefusion/facefusion.git .
+# Клонирование FaceFusion версии 3.0.0 (стабильная)
+RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git . && \
+    ls -la && \
+    echo "Содержимое директории после клонирования:"
 
 # КРИТИЧЕСКИ ВАЖНО: Удаляем все версии numpy и onnxruntime
 RUN pip uninstall -y numpy onnxruntime onnxruntime-gpu || true
@@ -43,6 +45,9 @@ RUN pip uninstall -y numpy && pip install --no-cache-dir "numpy==1.26.4"
 
 # Установка RunPod SDK для работы с serverless
 RUN pip install --no-cache-dir runpod
+
+# Запускаем установщик FaceFusion для CUDA
+RUN python install.py --onnxruntimes cuda-11.8 --skip-conda || echo "Install script completed"
 
 # Создание директории для моделей
 RUN mkdir -p /root/.facefusion/models
