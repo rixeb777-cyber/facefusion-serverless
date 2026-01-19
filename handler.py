@@ -1,51 +1,84 @@
 import runpod
 import subprocess
-import requests
 import os
 import sys
+import urllib.request
+import onnxruntime
+import time
 
-def download_file(url, save_path):
-    print(f"DEBUG: Downloading {url}")
-    r = requests.get(url, stream=True)
-    with open(save_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
+# Диагностика при старте
+print("=== DIAGNOSTICS ===")
+providers = onnxruntime.get_available_providers()
+print(f"Available Providers: {providers}")
+print(f"CUDA Active: {'CUDAExecutionProvider' in providers}")
+print("===================")
 
-def handler(job):
-    job_input = job.get('input', job)
-    source_p, target_p, output_p = "/app/source.jpg", "/app/target.mp4", "/app/output.mp4"
-    if os.path.exists(output_p): os.remove(output_p)
+def download_file(url, output_path):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    try:
+        print(f"Downloading {url}...")
+        urllib.request.urlretrieve(url, output_path)
+        return output_path
+    except Exception as e:
+        print(f"Download Error: {e}")
+        raise
 
-    download_file(job_input.get('source'), source_p)
-    download_file(job_input.get('target'), target_p)
+def process_facefusion(job):
+    try:
+        job_input = job["input"]
+        source_url = job_input.get("source")
+        target_url = job_input.get("target")
+        
+        # Рабочие пути
+        source_path = "/tmp/input/source.jpg"
+        target_path = "/tmp/input/target.mp4"
+        output_path = "/tmp/output/output.mp4"
+        
+        # Очистка и создание папок
+        os.makedirs("/tmp/input", exist_ok=True)
+        os.makedirs("/tmp/output", exist_ok=True)
+        if os.path.exists(output_path): os.remove(output_path)
+        
+        # Загрузка файлов
+        download_file(source_url, source_path)
+        download_file(target_url, target_path)
+        
+        # Команда запуска (именно run.py для версии 3.0)
+        command = [
+            "python", "run.py", "headless-run",
+            "-s", source_path,
+            "-t", target_path,
+            "-o", output_path,
+            "--processors", "face_swapper",
+            "--execution-providers", "cuda",
+            "--skip-download"
+        ]
+        
+        print(f"Starting FaceFusion: {' '.join(command)}")
+        
+        result = subprocess.run(
+            command,
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            timeout=600 # Увеличили до 10 минут
+        )
+        
+        print("STDOUT:", result.stdout)
+        
+        if os.path.exists(output_path):
+            size = os.path.getsize(output_path)
+            return {
+                "success": True,
+                "message": f"Generated! Size: {size} bytes",
+                "output_path": output_path,
+                "diagnostics": providers
+            }
+        else:
+            return {"error": "Output file not found", "stderr": result.stderr}
+            
+    except Exception as e:
+        return {"error": str(e)}
 
-    # v215: Добавляем --log-level debug для полной картины
-    cmd = [
-        "python3", "run.py", "headless-run",
-        "-s", source_p, 
-        "-t", target_p, 
-        "-o", output_p,
-        "--processors", "face_swapper",
-        "--execution-providers", "cuda",
-        "--skip-download",
-        "--log-level", "debug"
-    ]
-
-    print(f"DEBUG: Starting FaceSwap process...")
-    
-    # Запускаем и читаем всё: и stdout, и stderr
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    
-    for line in process.stdout:
-        print(f"FF_LOG: {line.strip()}")
-        sys.stdout.flush()
-    
-    process.wait()
-
-    if os.path.exists(output_p):
-        print(f"DEBUG: Success! Output created at {output_p}")
-        return {"status": "success", "output": output_p}
-    else:
-        print(f"DEBUG: Failed. No output file found.")
-        return {"status": "error", "msg": "Process finished but no output file. Check FF_LOGs."}
-
-runpod.serverless.start({"handler": handler})
+if __name__ == "__main__":
+    runpod.serverless.start({"handler": process_facefusion})
