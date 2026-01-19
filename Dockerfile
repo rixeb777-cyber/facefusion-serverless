@@ -17,13 +17,27 @@ WORKDIR /app
 # Клонирование FaceFusion
 RUN git clone https://github.com/facefusion/facefusion.git .
 
-# Установка Python зависимостей из requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Сначала устанавливаем numpy нужной версии
+RUN pip install --no-cache-dir numpy==1.26.4
 
-# Принудительная установка совместимых версий для избежания конфликтов
-RUN pip uninstall -y onnxruntime onnxruntime-gpu && \
-    pip install --no-cache-dir numpy==1.26.4 && \
-    pip install --no-cache-dir onnxruntime-gpu==1.17.1
+# Удаляем конфликтующие пакеты если есть
+RUN pip uninstall -y onnxruntime onnxruntime-gpu || true
+
+# Устанавливаем onnxruntime-gpu для CUDA 11.8
+RUN pip install --no-cache-dir onnxruntime-gpu==1.17.1
+
+# Устанавливаем остальные зависимости, игнорируя конфликты версий
+RUN pip install --no-cache-dir -r requirements.txt --no-deps || true
+
+# Устанавливаем основные зависимости FaceFusion вручную
+RUN pip install --no-cache-dir \
+    opencv-python \
+    pillow \
+    tqdm \
+    requests \
+    gradio \
+    insightface \
+    onnx
 
 # Установка RunPod SDK для работы с serverless
 RUN pip install --no-cache-dir runpod
@@ -31,13 +45,15 @@ RUN pip install --no-cache-dir runpod
 # Создание директории для моделей
 RUN mkdir -p /root/.facefusion/models
 
-# Предзагрузка всех необходимых моделей для избежания таймаутов при первом запуске
-# Используем правильные URL из официального репозитория
-RUN cd /root/.facefusion/models && \
-    wget --no-check-certificate https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/inswapper_128_fp16.onnx && \
-    wget --no-check-certificate https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx && \
-    wget --no-check-certificate https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/arcface_w600k_r50.onnx && \
-    wget --no-check-certificate https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/face_landmarker_68_5.onnx
+# Скачиваем модели напрямую (используем корректные URL)
+RUN wget -O /root/.facefusion/models/inswapper_128_fp16.onnx \
+    "https://huggingface.co/deepinsight/inswapper/resolve/main/inswapper_128_fp16.onnx" && \
+    wget -O /root/.facefusion/models/yoloface_8n.onnx \
+    "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/yoloface_8n.onnx" && \
+    wget -O /root/.facefusion/models/arcface_w600k_r50.onnx \
+    "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/arcface_w600k_r50.onnx" && \
+    wget -O /root/.facefusion/models/face_landmarker_68_5.onnx \
+    "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/face_landmarker_68_5.onnx"
 
 # Копирование обработчика
 COPY handler.py /app/handler.py
