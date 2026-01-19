@@ -18,27 +18,34 @@ def handler(job):
     download_file(job_input.get('source'), source_p)
     download_file(job_input.get('target'), target_p)
 
-    # v214: Теперь запускаем с CUDA на полную мощность!
+    # v215: Добавляем --log-level debug для полной картины
     cmd = [
         "python3", "run.py", "headless-run",
-        "-s", source_p, "-t", target_p, "-o", output_p,
+        "-s", source_p, 
+        "-t", target_p, 
+        "-o", output_p,
         "--processors", "face_swapper",
         "--execution-providers", "cuda",
-        "--skip-download"
+        "--skip-download",
+        "--log-level", "debug"
     ]
 
-    print(f"DEBUG: Running FaceSwap on GPU...")
+    print(f"DEBUG: Starting FaceSwap process...")
     
+    # Запускаем и читаем всё: и stdout, и stderr
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    
     for line in process.stdout:
-        # Убираем лишний мусор из логов, оставляем только важное
-        if "Processing" in line or "Analyzing" in line:
-            print(f"FACEFUSION_LOG: {line.strip()}")
-            sys.stdout.flush()
+        print(f"FF_LOG: {line.strip()}")
+        sys.stdout.flush()
+    
     process.wait()
 
     if os.path.exists(output_p):
+        print(f"DEBUG: Success! Output created at {output_p}")
         return {"status": "success", "output": output_p}
-    return {"status": "error", "msg": "Processing failed. Check worker logs."}
+    else:
+        print(f"DEBUG: Failed. No output file found.")
+        return {"status": "error", "msg": "Process finished but no output file. Check FF_LOGs."}
 
 runpod.serverless.start({"handler": handler})
