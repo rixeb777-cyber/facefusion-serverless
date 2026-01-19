@@ -104,10 +104,12 @@ def process_facefusion(job):
             "--output-path", output_path,
             "--processors", "face_swapper",
             "--execution-providers", "cuda",
-            "--video-memory-strategy", "strict", # ВОЗВРАЩАЕМ ЭТОТ ФЛАГ ДЛЯ СТАБИЛЬНОСТИ
-            "--execution-thread-count", "4",      # Пробуем 4 вместо 1 (золотая середина)
+            "--video-memory-strategy", "strict",     # ТОТ САМЫЙ ФЛАГ
+            "--execution-thread-count", "4",          # Поднимаем с 1 до 4 для скорости
             "--execution-queue-count", "1",
-            "--output-video-quality", "60"
+            "--face-detector-angles", "0", "90", "180", "270", # ЧТОБЫ ГПУ ПАХАЛ
+            "--output-video-quality", "60",
+            "--skip-download" 
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")

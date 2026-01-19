@@ -1,4 +1,4 @@
-name: Build and Push v230
+name: Build and Push v231
 on:
   push:
     branches: [ main ]
@@ -15,4 +15,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/facefusion-serverless:v230
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/facefusion-serverless:v231
