@@ -103,10 +103,11 @@ def process_facefusion(job):
             "--output-path", output_path,
             "--processors", "face_swapper",
             "--execution-providers", "cuda",
-            "--video-memory-strategy", "strict",     # СТРОГИЙ КОНТРОЛЬ ПАМЯТИ (Для стабильности)
-            "--execution-thread-count", "4",          # ПОДНИМАЕМ ДО 4 (Золотая середина между 1 и 12)
-            "--face-detector-angles", "0", "90", "180", "270", # GPU БУДЕТ РЕАЛЬНО ЗАНЯТ ПОИСКОМ ЛИЦ
-            "--skip-download",                        # УБИВАЕМ ОШИБКУ NSFW И HASH VALIDATION
+            "--video-memory-strategy", "strict",
+            "--execution-thread-count", "4",
+            "--face-detector-angles", "0", "90", "180", "270",
+            "--skip-download",
+            "--skip-content-analyser",  # ВОТ ОН! Этот флаг убивает проверку open_nsfw
             "--output-video-quality", "60"
         ]
         
