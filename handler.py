@@ -97,12 +97,14 @@ def process_facefusion(job):
         # ВАЖНО: Используем facefusion.py, а не run.py!
         command = [
             "python", "facefusion.py",
-            "headless-run",                   # Режим без GUI
-            "--execution-providers", "cuda",  # Для FaceFusion 3.0.0 используем 'cuda', не 'CUDAExecutionProvider'
-            "--processors", "face_swapper",   # Используем процессор замены лиц
-            "-s", source_path,                # Исходное фото
-            "-t", target_path,                # Целевое видео
-            "-o", output_path                 # Выходной файл
+            "headless-run",
+            "--execution-providers", "cuda",
+            "--execution-thread-count", "10",  # Увеличиваем количество потоков (для A4500 оптимально 10-12)
+            "--execution-queue-count", "2",     # Даем видеокарте очередь задач, чтобы она не простаивала
+            "--processors", "face_swapper",
+            "-s", source_path,
+            "-t", target_path,
+            "-o", output_path
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
