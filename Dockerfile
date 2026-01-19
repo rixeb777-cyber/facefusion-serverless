@@ -1,4 +1,4 @@
-# Твой проверенный базовый образ
+# Используем проверенный образ
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
 # Установка системных зависимостей
@@ -17,14 +17,17 @@ WORKDIR /app
 # Клонирование FaceFusion
 RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git .
 
-# --- СЕКЦИЯ ИСПРАВЛЕНИЯ БИБЛИОТЕК ---
-# 1. Удаляем всё старое
+# --- КРИТИЧЕСКИЙ БЛОК: ФИКС NUMPY ---
+# Удаляем всё, что может конфликтовать
 RUN pip uninstall -y numpy onnxruntime onnxruntime-gpu 2>/dev/null || true
 
-# 2. Ставим NumPy и ONNX ПЕРВЫМИ и фиксируем их
-RUN pip install --no-cache-dir "numpy==1.26.4" "onnxruntime-gpu==1.17.1"
+# Ставим ПРАВИЛЬНЫЙ NumPy первым и фиксируем его для всех последующих установок
+RUN pip install --no-cache-dir "numpy==1.26.4"
 
-# 3. Ставим остальные зависимости, ЗАПРЕЩАЯ им трогать numpy
+# Ставим ONNX Runtime GPU, который дружит с этим NumPy
+RUN pip install --no-cache-dir "onnxruntime-gpu==1.17.1"
+
+# Ставим всё остальное, ПРИНУДИТЕЛЬНО запрещая обновлять numpy
 RUN pip install --no-cache-dir \
     "opencv-python>=4.8.0,<5.0.0" \
     "pillow>=10.0.0,<11.0.0" \
@@ -32,7 +35,7 @@ RUN pip install --no-cache-dir \
     "onnx>=1.15.0,<2.0.0" \
     "tqdm" "requests" "filetype" "pyyaml" "protobuf" "gdown" "inquirer" "gradio" runpod
 
-# --- ПРЕДЗАГРУЗКА МОДЕЛЕЙ (Чтобы проскочить проверку хеша) ---
+# --- ПРЕДЗАГРУЗКА МОДЕЛЕЙ (Чтобы не упасть на хешах) ---
 RUN mkdir -p /root/.facefusion/models && \
     curl -L -o /root/.facefusion/models/open_nsfw.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/open_nsfw.onnx && \
     curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128_fp16.onnx && \
@@ -40,7 +43,6 @@ RUN mkdir -p /root/.facefusion/models && \
 
 COPY handler.py /app/handler.py
 
-# Настройки CUDA
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=/usr/local/cuda/bin:$PATH
