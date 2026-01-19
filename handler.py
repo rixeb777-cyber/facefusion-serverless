@@ -95,20 +95,20 @@ def process_facefusion(job):
         
         # Формирование команды для запуска FaceFusion
         # ВАЖНО: Используем facefusion.py, а не run.py!
-        # ТУРБО-КОМАНДА ДЛЯ GPU
         command = [
             "python", "facefusion.py",
             "headless-run",
-            "--source", source_path,
-            "--target", target_path,
-            "--output-path", output_path,
-            "--processors", "face_swapper", # Оставляем только замену лиц, без nsfw-фильтра
-            "--execution-providers", "cuda",
-            "--video-memory-strategy", "strict",
-            "--execution-thread-count", "1",
-            "--face-detector-angles", "0", "90", "180", "270",
-            "--skip-download",               # Игнорировать проверку хешей и докачку
-            "--no-confirm"                   # Не ждать подтверждений
+            "-s", source_path,                # Source (короткая форма)
+            "-t", target_path,                # Target (короткая форма)
+            "-o", output_path,                # Output (короткая форма)
+            "--processors", "face_swapper",   # Только замена лиц
+            "--execution-providers", "cuda",  # ОБЯЗАТЕЛЬНО GPU
+            "--execution-thread-count", "4",  # 4 потока для GPU
+            "--execution-queue-count", "2",   # Очередь для параллелизма
+            "--video-memory-strategy", "moderate",  # Умеренное использование памяти
+            "--face-detector-model", "yoloface",    # Быстрая модель детекции
+            "--face-detector-size", "640x640",
+            "--skip-download"                 # Не проверять хеши моделей
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
