@@ -2,9 +2,7 @@ import runpod
 import os
 import subprocess
 import requests
-import torch
-import numpy
-import onnxruntime
+import sys
 
 def log(message):
     print(f"DEBUG: {message}", flush=True)
@@ -22,21 +20,13 @@ def download_file(url, save_path):
 
 def handler(job):
     try:
-        # Достаем входные данные
         job_input = job.get('input', {})
-        log(f"Входящий JSON: {job_input}") # Это поможет понять, что пришло
-
         source_url = job_input.get('source_url')
         target_url = job_input.get('target_url')
 
         if not source_url or not target_url:
-            return {
-                "error": "Отсутствуют URL-адреса", 
-                "received_input": job_input,
-                "tip": "Убедитесь, что параметры внутри объекта 'input'"
-            }
+            return {"error": "Отсутствуют URL-адреса", "received": job_input}
 
-        # Подготовка папок
         os.makedirs('/tmp/input', exist_ok=True)
         os.makedirs('/tmp/output', exist_ok=True)
 
@@ -44,30 +34,41 @@ def handler(job):
         target_path = download_file(target_url, "/tmp/input/target.mp4")
         output_path = "/tmp/output/result.mp4"
 
-        # Команда для RTX 4090
+        # ИСПРАВЛЕННАЯ КОМАНДА
         command = [
-            "python", "facefusion.py", "headless-run",
+            "python", "-u", "facefusion.py", "headless-run",
             "--execution-providers", "cuda",
             "--processors", "face_swapper",
             "--execution-thread-count", "24",
-            "--video-memory-strategy", "high",
+            "--video-memory-strategy", "tolerant",  # ЗАМЕНИЛИ high НА tolerant
             "--skip-download",
             "-s", source_path,
             "-t", target_path,
             "-o", output_path
         ]
 
-        log("🚀 Начинаю замену лица...")
-        process = subprocess.run(command, capture_output=True, text=True)
+        log("🚀 Запуск процесса (tolerant mode)...")
         
-        # Печатаем логи самого FaceFusion для диагностики
-        print(process.stdout)
-        print(process.stderr)
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            text=True,
+            bufsize=1
+        )
+
+        # Здесь полетят твои любимые проценты Processing: 5%...
+        for line in process.stdout:
+            print(line, end='', flush=True)
+
+        process.wait()
 
         if os.path.exists(output_path):
-            return {"status": "success", "message": "Готово!"}
+            log("✅ Победа! Видео готово.")
+            return {"status": "success", "message": "Done"}
         else:
-            return {"status": "error", "message": "Файл не создался", "stderr": process.stderr}
+            log("❌ Ошибка: Файл не создался.")
+            return {"status": "error", "message": "Process failed"}
 
     except Exception as e:
         log(f"Критический сбой: {str(e)}")
