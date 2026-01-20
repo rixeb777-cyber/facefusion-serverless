@@ -1,38 +1,76 @@
+# Базовый образ с CUDA 11.8 и PyTorch для стабильной работы с RTX картами
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
+# Установка системных зависимостей
 RUN apt-get update && apt-get install -y \
-    ffmpeg libgl1-mesa-glx libgomp1 python3-tk wget git curl build-essential \
+    ffmpeg \
+    libgl1-mesa-glx \
+    libgomp1 \
+    python3-tk \
+    wget \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
+# Установка рабочей директории
 WORKDIR /app
 
-RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git .
+# Клонирование FaceFusion версии 3.0.0 (стабильная)
+RUN git clone --branch 3.0.0 --depth 1 https://github.com/facefusion/facefusion.git . && \
+    ls -la && \
+    echo "Содержимое директории после клонирования:"
 
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir \
-    "numpy==1.26.4" \
-    "onnxruntime-gpu==1.17.1" \
-    "nvidia-cudnn-cu11==8.9.2.26" \
-    "nvidia-cublas-cu11==11.11.3.6" \
+# КРИТИЧЕСКИ ВАЖНО: Удаляем все версии numpy и onnxruntime перед установкой
+RUN pip uninstall -y numpy onnxruntime onnxruntime-gpu 2>/dev/null || true
+
+# Устанавливаем СТРОГО numpy 1.26.4 (НЕ 2.x!)
+RUN pip install --no-cache-dir "numpy==1.26.4"
+
+# Устанавливаем onnxruntime-gpu строго 1.17.1 для CUDA 11.8
+RUN pip install --no-cache-dir "onnxruntime-gpu==1.17.1"
+
+# Устанавливаем основные зависимости с фиксацией версий (БЕЗ обновления numpy и onnxruntime)
+RUN pip install --no-cache-dir \
     "opencv-python>=4.8.0,<5.0.0" \
+    "pillow>=10.0.0,<11.0.0" \
+    "tqdm>=4.66.0" \
+    "requests>=2.31.0" \
     "insightface>=0.7.3" \
     "onnx>=1.15.0,<2.0.0" \
-    "gradio" "runpod" "tqdm" "requests" "filetype" "pyyaml" "protobuf"
+    "filetype" \
+    "pyyaml" \
+    "protobuf" \
+    "gdown" \
+    "inquirer" \
+    "gradio"
 
-# Фикс путей CUDA
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib:/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+# ВАЖНО: Не используем requirements.txt и install.py, так как они переустанавливают onnxruntime!
+# Вместо этого устанавливаем только то что нужно FaceFusion
 
-# Ссылки для ONNX
-RUN ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/libcudnn.so.8 /usr/lib/libcudnn.so.8 && \
-    ln -sf /usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib/libcublas.so.11 /usr/lib/libcublas.so.11
+# Установка RunPod SDK для работы с serverless
+RUN pip install --no-cache-dir runpod
 
-# Предзагрузка моделей с правильными путями для 3.0.0
-RUN mkdir -p /root/.facefusion/models && \
-    curl -L -o /root/.facefusion/models/inswapper_128_fp16.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128_fp16.onnx && \
-    curl -L -o /root/.facefusion/models/yoloface_8n.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/yoloface_8n.onnx && \
-    curl -L -o /root/.facefusion/models/arcface_w600k_r50.onnx https://github.com/facefusion/facefusion-assets/releases/download/models/arcface_w600k_r50.onnx
-# Мы специально НЕ качаем open_nsfw, чтобы он не спотыкался о хеш, 
-# и отключаем его в команде запуска через --content-analyser-model none
+# Создание директории для моделей
+RUN mkdir -p /root/.facefusion/models
 
+# Модели будут скачаны автоматически FaceFusion при первом запуске
+# Это надежнее чем пытаться скачать их вручную при сборке образа
+
+# ФИНАЛЬНАЯ ПРОВЕРКА И БЛОКИРОВКА ВЕРСИЙ
+# Принудительно переустанавливаем правильные версии если что-то их изменило
+RUN pip uninstall -y numpy onnxruntime onnxruntime-gpu 2>/dev/null || true && \
+    pip install --no-cache-dir "numpy==1.26.4" "onnxruntime-gpu==1.17.1"
+
+# Проверка установленных версий
+RUN python -c "import numpy; print(f'NumPy: {numpy.__version__}')" && \
+    python -c "import onnxruntime; print(f'ONNX Runtime: {onnxruntime.__version__}'); print(f'Providers: {onnxruntime.get_available_providers()}')"
+
+# Копирование обработчика
 COPY handler.py /app/handler.py
+
+# Настройка переменных окружения для корректной работы CUDA
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=/usr/local/cuda/bin:$PATH
+
+# Запуск handler при старте контейнера
 CMD ["python", "-u", "handler.py"]
