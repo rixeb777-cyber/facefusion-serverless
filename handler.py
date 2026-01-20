@@ -97,12 +97,17 @@ def process_facefusion(job):
         # ВАЖНО: Используем facefusion.py, а не run.py!
         command = [
             "python", "facefusion.py",
-            "headless-run",                   # Режим без GUI
-            "--execution-providers", "cuda",  # Для FaceFusion 3.0.0 используем 'cuda', не 'CUDAExecutionProvider'
-            "--processors", "face_swapper",   # Используем процессор замены лиц
-            "-s", source_path,                # Исходное фото
-            "-t", target_path,                # Целевое видео
-            "-o", output_path                 # Выходной файл
+            "headless-run",
+            "-s", source_path,                # Source (короткая форма)
+            "-t", target_path,                # Target (короткая форма)
+            "-o", output_path,                # Output (короткая форма)
+            "--processors", "face_swapper",   # Только замена лиц
+            "--execution-providers", "cuda",  # ОБЯЗАТЕЛЬНО GPU
+            "--execution-thread-count", "4",  # 4 потока для GPU
+            "--execution-queue-count", "2",   # Очередь для параллелизма
+            "--video-memory-strategy", "moderate",  # Умеренное использование памяти
+            "--face-detector-model", "yoloface",    # Быстрая модель детекции
+            "--face-detector-size", "640x640"
         ]
         
         print("\n🔧 КОМАНДА ЗАПУСКА:")
