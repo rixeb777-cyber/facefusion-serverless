@@ -79,4 +79,4 @@ ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=/usr/local/cuda/bin:$PATH
 
 # Запуск handler при старте контейнера
-CMD ["python", "-u", "handler.py"] 
+CMD ["python", "-u", "handler.py"]
